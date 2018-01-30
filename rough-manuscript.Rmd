@@ -1,0 +1,116 @@
+---
+title: "Cost effective analysis of second line therapy in RRMM in India"
+author: "Dr Suman Kumar"
+date: "16 January 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Mother Study
+
+[Parent article](http://dx.doi.org/10.1016/j.clinthera2017.08.010)
+
+## Inclusion criteria
+
+Post multiple regimens (median 5)
+
+## Arms
+
+1.  [MM-002](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3962162/): 
+POM-d
+
+1.  [SIRIUS]( http://dx.doi.org/10.1016/S0140-6736&#40;15&#41;01120-4): Daratumumab
+
+1.  [PX-171-003-A1](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4123387/): Carfilzomib
+
+## Multistate model
+
+1.  Progression Free state
+
+1.  Post Progression state
+
+1.  Death
+
+- Time horizon of 3 years was considered for economic model.
+
+- 28 days cycle was used for each regimen.
+
+- All patients assumed to be in progression free state at the start.
+
+- Subsequent cycles, either of the three states.
+
+- Once in post progressive state, they will not return to progression 
+free state
+
+- **Transition probability to PP state treatment specific**
+
+    - POM-d: gompertz distribution 
+        - Scale -1.77, normal, se 0.015
+        - Shape 0.03, normal, se 0.002
+
+    - vs DARA: HR
+        - 0.95 (LB 0.67, UB 1.33, log normal, se 0.045)
+    
+    - vs CAR: HR
+        - 0.83 (LB 0.61, UB 1.12, log normal, se 0.038)
+
+- **PF state -> Death:** per cycle fatal progression probability.
+
+    - Same for all the three groups
+    - 0.022 (LB 0.013, UB 0.036, beta, se 0.06)
+
+- **Post progression survival (PPS):** Common PPS curve will be used
+
+    - Gompertz curve
+        - Scale: -2.94, norm, se 0.108
+        - Shape: 0.02, norm, se 0.008
+
+    - We will use rgompertz function to get the random smaples and 
+    will not use the normal distribution of scale and shape 
+    parameters as they are leading to absurd distribution
+    
+```{r}
+pgompertz(seq(0, 0.15, 0.001), shape = 2.94, rate = 1/0.02)
+```
+
+- **Time to treatment failure:** defined as time from the initiation 
+of treatment with study drug till disease progression, death or 
+treatment discontinuation. **PP state**, has common TTF curve.
+
+    - PFS
+        - POM-d: HR 1.19, (LB 0.95, UB 1.43), log normal se 0.045
+        - DARA: HR 1.13, (LB 0.9, UB 1.36), log normal se 0.045
+        - CAR: HR 1.03, (LB 0.82, UB 1.24), log normal se 0.038
+
+## Conduct of trial
+
+1.  All patients start with PF state.
+
+1.  Depending on the distribution, each patient can go in 
+either PP or death.
+
+1.  The treatment depends on the conditional probability.
+
+1.  Once in PP state, he can only go in Death or continue 
+in PP state.
+
+1.  Each of the patient time line will be divided into 28 d
+cycles.
+
+1.  Each cycle (end) will have following values:
+    a.  State: PF, PP, Death
+    b.  Therapy: Any of the treatment protocols or no treatment
+    c.  Adverse events
+    
+    
+## Adverse Effects
+
+### POM-d
+
+Median follow up of 14.1 months among 113 patients:
+
+Total patient months  = `r 14.1 * 113`
+
