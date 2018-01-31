@@ -1,4 +1,5 @@
 #include <Rcpp.h>
+#include <map>
 using namespace Rcpp;
 
 // [[Rcpp::plugins("cpp11")]]
@@ -20,6 +21,58 @@ enum Regimen {
   PanVD = 6,
   NO = 7
 };
+
+class Entity {
+private:
+  std::map<int, std::vector<double>> m_prices;
+
+public:
+
+  Entity(std::vector<double> bp_strata_unit, std::vector<int> strata,
+         double bp, double unit, int t_sim, double infl_ll, double infl_ul) {
+
+    NumericVector infl_vec = Rcpp::runif(t_sim - 1, infl_ll, infl_ul);
+    infl_vec.push_front(0);
+
+    auto iter_s = strata.cbegin();
+    auto iter_bp = bp_strata_unit.cbegin();
+
+    while (iter_s != strata.cend()) {
+
+      std::vector<double> price_vector;
+      double price = ((*iter_bp) * unit) + bp;
+      for (R_xlen_t j = 0; j < t_sim; ++j) {
+        price = price * (1 + infl_vec[j]);
+        price_vector.push_back(price);
+      }
+
+      m_prices.insert(std::pair<int, std::vector<double>>(*iter_s, price_vector));
+
+      ++iter_s;
+      ++iter_bp;
+    }         // end while
+  }
+
+  double cur_price(int stratum, int pres_t) {
+    return m_prices.at(stratum)[pres_t - 1];
+  }
+
+  double discounted_price(int stratum, int pres_t, double r_discount) {
+    double pres_price = cur_price(stratum, pres_t);
+    return pres_price / std::pow((1 + r_discount), pres_t);
+  }
+
+};
+
+void chng_reg_ctr(const std::vector<int>& regimen,
+                  const Regimen& present, int* regimen_ctr) {
+
+  if (regimen.back() == int(present)) {
+    ++(*regimen_ctr);
+  } else {
+    (*regimen_ctr) = 0;
+  }
+}
 
 Regimen select_second_line (Regimen arms) {
 
@@ -105,10 +158,6 @@ List time_lines (int arms, int N) {
 
   Regimen first_line = NO;
 
-  //Rcout << "POM" << Regimen::POM_d << std::endl;
-  //Rcout << "CARF" << Regimen::CARF << std::endl;
-  //Rcout << "NO" << Regimen::NO << std::endl;
-
   switch(arms) {
     case 0:             // pomd
       shape_pfs = 1.77;
@@ -121,7 +170,6 @@ List time_lines (int arms, int N) {
       prob_tpenia = 0.19 / 14.2;
       break;
     case 1:  // dara
-      //Rcout << "entered dara 1" << std::endl;
       shape_pfs = 1.77;
       rate_pfs = (1.0 / 0.95) * ( 1.0 / 0.03 );
       rate_ttf = (1.0 / 1.13) * rate_pfs;
@@ -132,7 +180,6 @@ List time_lines (int arms, int N) {
       prob_tpenia = 20.0 / (9.3 * 106);
       break;
     case 2:             // car
-      //Rcout << "entered car 2" << std::endl;
       shape_pfs = 1.77;
       rate_pfs = (1.0 / 0.83) * ( 1.0 / 0.03 );
       rate_ttf = (1.0 / 1.03) * rate_pfs;
@@ -144,7 +191,6 @@ List time_lines (int arms, int N) {
 
   }
 
-  //Rcout << "first line " << first_line << std::endl;
   NumericVector t_to_prog = rgomp(N,
                       _["shape"] = shape_pfs,
                       _["rate"] = rate_pfs);
@@ -166,20 +212,36 @@ List time_lines (int arms, int N) {
   NumericVector util_delta_ae = Rcpp::runif(N,
                           UTIL_DELTA_AE_LL, UTIL_DELTA_AE_UL);
 
-  std::vector<int> cum_mnths;
-  std::vector<int> state;
-  std::vector<int> regimen;
-  std::vector<int> ae_anemia;
-  std::vector<int> ae_fatigue;
-  std::vector<int> ae_npenia;
-  std::vector<int> ae_tpenia;
+  std::vector<int> cum_mnths, state, regimen, ae_anemia,
+                    ae_fatigue, ae_npenia, ae_tpenia;
+  std::vector<double> cost_regimen, disc_cost_regimen,
+                      cost_anemia, disc_cost_anemia,
+                      cost_fatigue, disc_cost_fatigue,
+                      cost_npenia, disc_cost_npenia,
+                      cost_tpenia, disc_cost_tpenia,
+                      utility, disc_utility,
+                      cost_health_adm, disc_cost_health_adm;
+
+  Entity* pom_d_reg;
+  Entity* dara_reg;
+  Entity* carf_reg;
+  Entity* len_d_reg;
+  Entity* bort_reg;
+  Entity* thal_d_reg;
+  Entity* panvd_reg;
+  Entity* util;
+  Entity* health_adm_cost;
+  Entity* anemia_cost;
+  Entity* fatigue_cost;
+  Entity* npenia_cost;
+  Entity* tpenia_cost;
 
   // simulate for each patient out of N patients
   for (R_xlen_t i = 0; i < N; ++i) {
 
-    double util_pfs_one = util_pfs[i];
-    double util_pps_one = util_pfs[i] + util_delta_pps[i];
-    double util_ae_one = util_pfs[i] + util_delta_ae[i];
+    double util_pfs_1 = util_pfs[i];
+    double util_pps_1 = util_pfs[i] + util_delta_pps[i];
+    double util_ae_1 = util_pfs[i] + util_delta_ae[i];
 
     int pd_pfs = std::ceil(CONV_TO_MNTHS_PFS * t_to_prog[i]);
     int pd_ttf = std::ceil(CONV_TO_MNTHS_PFS * t_to_ttf[i]);
@@ -189,6 +251,34 @@ List time_lines (int arms, int N) {
     bool is_dead = false;
     bool has_progressed = false;
     Regimen second_line = NO;
+    int regimen_ctr = 0;
+
+    /*
+     POM_d = 0,
+     DARA = 1,
+     CARF = 2,
+     LEN_d = 3,
+     BORT = 4,
+     THAL_d = 5,
+     PanVD = 6,
+     NO = 7
+     */
+    pom_d_reg = new Entity;
+    dara_reg = new Entity;
+    carf_reg = new Entity;
+    len_d_reg = new Entity;
+    bort_reg = new Entity;
+    thal_d_reg = new Entity;
+    panvd_reg = new Entity;
+
+    util = new Entity;
+
+    health_adm_cost = new Entity;
+
+    anemia_cost = new Entity;
+    fatigue_cost = new Entity;
+    npenia_cost = new Entity;
+    tpenia_cost = new Entity;
 
     for (R_xlen_t time = 1; time <= tot_dur_for_sim; ++time) {
 
@@ -200,11 +290,15 @@ List time_lines (int arms, int N) {
 
       if (!has_progressed) {
         if (time <= pd_ttf) {
+          // if repeated entry of same regimen regimen_ctr will be +1 else set 0.
+          chng_reg_ctr(regimen, first_line, &regimen_ctr);
           regimen.push_back(first_line);
         } else {
+          chng_reg_ctr(regimen, NO, &regimen_ctr);
           regimen.push_back(NO);
         }
       } else {
+        chng_reg_ctr(regimen, second_line, &regimen_ctr);
         regimen.push_back(second_line);
       }
 
@@ -291,8 +385,38 @@ List time_lines (int arms, int N) {
     ae_npenia.clear();
     ae_tpenia.clear();
 
+    delete pom_d_reg;
+    delete dara_reg;
+    delete carf_reg;
+    delete len_d_reg;
+    delete bort_reg;
+    delete thal_d_reg;
+    delete panvd_reg;
+    delete util;
+    delete health_adm_cost;
+    delete anemia_cost;
+    delete fatigue_cost;
+    delete npenia_cost;
+    delete tpenia_cost;
+
+
+
   } // out of patient loop
+
+  pom_d_reg = nullptr;
+  dara_reg = nullptr;
+  carf_reg = nullptr;
+  len_d_reg = nullptr;
+  bort_reg = nullptr;
+  thal_d_reg = nullptr;
+  panvd_reg = nullptr;
+  util = nullptr;
+  health_adm_cost = nullptr;
+  anemia_cost = nullptr;
+  fatigue_cost = nullptr;
+  npenia_cost = nullptr;
+  tpenia_cost = nullptr;
+
   return out;
 
 }
-
