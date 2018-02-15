@@ -361,7 +361,7 @@ List time_lines (int arms, int N) {
   std::vector<double> bp_str_tpenia {1800};
   std::vector<Rng> str_tpenia {Rng {0, MAX_IDX}};
 
-  Rcout << "Entering patient loop" << std::endl;
+  //Rcout << "Entering patient loop" << std::endl;
   // simulate for each patient out of N patients
   for (R_xlen_t i = 0; i < N; ++i) {
 
@@ -369,9 +369,9 @@ List time_lines (int arms, int N) {
     double util_pps_1 = util_pfs[i] + util_delta_pps[i];
     double util_ae_1 = util_pfs[i] + util_delta_ae[i];
 
-    Rcout << "Util: " << util_pfs_1 << std::endl;
-    Rcout << "Util pps: " << util_pps_1 << std::endl;
-    Rcout << "Util ae: " << util_ae_1 << std::endl;
+    //Rcout << "Util: " << util_pfs_1 << std::endl;
+    //Rcout << "Util pps: " << util_pps_1 << std::endl;
+    //Rcout << "Util ae: " << util_ae_1 << std::endl;
     // unit = 1
     std::vector<double> bp_str_unit_util {0, 0, 0};
     std::vector<double> bp_str_util {util_pfs_1, util_pps_1, util_ae_1};
@@ -449,7 +449,7 @@ List time_lines (int arms, int N) {
     int regimen_ctr = 0;
     bool is_ae = false;
 
-    Rcout << "entering time line loop" << std::endl;
+    //Rcout << "entering time line loop" << std::endl;
 
     for (R_xlen_t time = 1; time <= tot_dur_for_sim; ++time) {
 
@@ -642,32 +642,32 @@ List time_lines (int arms, int N) {
       is_ae = false;
 
       if (is_dead) {
-        Rcout << "tot time for simulation: " << tot_dur_for_sim << std::endl;
-        Rcout << "time of death: " << time << std::endl;
+        //Rcout << "tot time for simulation: " << tot_dur_for_sim << std::endl;
+        //Rcout << "time of death: " << time << std::endl;
         break;
       }
     } // out of time loop
 
-    Rcout << "out of time loop" << std::endl;
-
-    Rcout << "cum mnths: " << cum_mnths.size() << std::endl;
-    Rcout << "state: " << state.size() << std::endl;
-    Rcout << "regimen: " << regimen.size() << std::endl;
-    Rcout << "ae_anemia: " << ae_anemia.size() << std::endl;
-    Rcout << "ae_npenia: " << ae_npenia.size() << std::endl;
-    Rcout << "ae_tpenia: " << ae_tpenia.size() << std::endl;
-    Rcout << "cost reg: " << cost_regimen.size() << std::endl;
-    Rcout << "disc cost reg: " << disc_cost_regimen.size() << std::endl;
-    Rcout << "cost anemia: " << cost_anemia.size() << std::endl;
-    Rcout << "disc anemia: " << disc_cost_anemia.size() << std::endl;
-    Rcout << "cost npenia: " << cost_npenia.size() << std::endl;
-    Rcout << "disc npenia: " << disc_cost_npenia.size() << std::endl;
-    Rcout << "cost tpenia: " << cost_tpenia.size() << std::endl;
-    Rcout << "disc cost tpenia: " << disc_cost_tpenia.size() << std::endl;
-    Rcout << "cost health: " << cost_health_adm.size() << std::endl;
-    Rcout << "disc health: " << disc_cost_health_adm.size() << std::endl;
-    Rcout << "utility: " << utility.size() << std::endl;
-    Rcout << "disc utility: " << disc_utility.size() << std::endl;
+    // Rcout << "out of time loop" << std::endl;
+    //
+    // Rcout << "cum mnths: " << cum_mnths.size() << std::endl;
+    // Rcout << "state: " << state.size() << std::endl;
+    // Rcout << "regimen: " << regimen.size() << std::endl;
+    // Rcout << "ae_anemia: " << ae_anemia.size() << std::endl;
+    // Rcout << "ae_npenia: " << ae_npenia.size() << std::endl;
+    // Rcout << "ae_tpenia: " << ae_tpenia.size() << std::endl;
+    // Rcout << "cost reg: " << cost_regimen.size() << std::endl;
+    // Rcout << "disc cost reg: " << disc_cost_regimen.size() << std::endl;
+    // Rcout << "cost anemia: " << cost_anemia.size() << std::endl;
+    // Rcout << "disc anemia: " << disc_cost_anemia.size() << std::endl;
+    // Rcout << "cost npenia: " << cost_npenia.size() << std::endl;
+    // Rcout << "disc npenia: " << disc_cost_npenia.size() << std::endl;
+    // Rcout << "cost tpenia: " << cost_tpenia.size() << std::endl;
+    // Rcout << "disc cost tpenia: " << disc_cost_tpenia.size() << std::endl;
+    // Rcout << "cost health: " << cost_health_adm.size() << std::endl;
+    // Rcout << "disc health: " << disc_cost_health_adm.size() << std::endl;
+    // Rcout << "utility: " << utility.size() << std::endl;
+    // Rcout << "disc utility: " << disc_utility.size() << std::endl;
 
     out.push_back(DataFrame::create(_["cum_month"] = cum_mnths,
                         _["state"] = state,
@@ -728,7 +728,7 @@ List time_lines (int arms, int N) {
     delete tpenia_cost;
   } // out of patient loop
 
-  Rcout << "out of patient loop" << std::endl;
+  //Rcout << "out of patient loop" << std::endl;
 
   pom_d_reg = nullptr;
   dara_reg = nullptr;
